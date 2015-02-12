@@ -1811,147 +1811,55 @@ int mdss_mdp_pp_resume(struct mdss_mdp_ctl *ctl, u32 dspp_num)
 	return 0;
 }
 
-static struct mdp_ar_gc_lut_data test_r[GC_LUT_SEGMENTS] = {
-		{0x00000000, 0x00000100, 0x00000000},
-		{0x00000FFF, 0x00000000, 0x00007F80},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000}
-};
+void mdss_mdp_pp_kcal_sat(int level)
+{
+	u32 copyback = 0;
+	struct mdp_pa_cfg_data pa_config;
 
-static struct mdp_ar_gc_lut_data test_g[GC_LUT_SEGMENTS] = {
-		{0x00000000, 0x00000100, 0x00000000},
-		{0x00000FFF, 0x00000000, 0x00007F80},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000}
-};
+	memset(&pa_config, 0, sizeof(struct mdp_pa_cfg_data));
 
-static struct mdp_ar_gc_lut_data test_b[GC_LUT_SEGMENTS] = {
-		{0x00000000, 0x00000100, 0x00000000},
-		{0x00000FFF, 0x00000000, 0x00007F80},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000},
-		{0x00000000, 0x00000000, 0x00000000}
-};
+	pa_config.block = MDP_LOGICAL_BLOCK_DISP_0;
+	pa_config.pa_data.flags = MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE;
+	pa_config.pa_data.sat_adj = level;
+
+	mdss_mdp_pa_config(&pa_config, &copyback);
+}
 
 void mdss_mdp_pp_kcal_enable(bool enable)
 {
-	int disp_num = 0;
-	u32 tbl_size;
-
-	struct mdp_ar_gc_lut_data *r_data;
-	struct mdp_ar_gc_lut_data *g_data;
-	struct mdp_ar_gc_lut_data *b_data;
+	u32 disp_num = 0, copybit = 0;
 	struct mdp_pgc_lut_data *pgc_config;
 
-	r_data = &mdss_pp_res->gc_lut_r[disp_num][0];
-	g_data = &mdss_pp_res->gc_lut_g[disp_num][0];
-	b_data = &mdss_pp_res->gc_lut_b[disp_num][0];
-
-	tbl_size = GC_LUT_SEGMENTS * sizeof(struct mdp_ar_gc_lut_data);
-	memcpy(r_data, test_r, tbl_size);
-	memcpy(g_data, test_g, tbl_size);
-	memcpy(b_data, test_b, tbl_size);
-
 	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
+	pgc_config->block = MDP_LOGICAL_BLOCK_DISP_0;
 
-	pgc_config->r_data =
-		&mdss_pp_res->gc_lut_r[disp_num][0];
-	pgc_config->g_data =
-		&mdss_pp_res->gc_lut_g[disp_num][0];
-	pgc_config->b_data =
-		&mdss_pp_res->gc_lut_b[disp_num][0];
-
-	if (enable)
+	if (enable) {
 		pgc_config->flags = MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE;
-	else {
+		pgc_config->r_data = &mdss_pp_res->gc_lut_r[disp_num][0];
+		pgc_config->g_data = &mdss_pp_res->gc_lut_g[disp_num][0];
+		pgc_config->b_data = &mdss_pp_res->gc_lut_b[disp_num][0];
+	} else
 		pgc_config->flags = MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
-		mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PGC;
-	}
+
+	mdss_mdp_argc_config(pgc_config, &copybit);
 }
 
 void mdss_mdp_pp_kcal_update(int kr, int kg, int kb)
 {
 	int i;
-	int disp_num = 0;
+	u32 disp_num = 0, copybit = 0;
+	struct mdp_pgc_lut_data *pgc_config;
 
-	pr_info("r=[%d], g=[%d], b=[%d]\n", kr, kg, kb);
+	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
+	pgc_config->block = MDP_LOGICAL_BLOCK_DISP_0;
 
 	for (i = 0; i < GC_LUT_SEGMENTS; i++) {
-		mdss_pp_res->gc_lut_r[disp_num][i].slope =
-		SCALED_BY_KCAL(test_r[i].slope, kr);
-		mdss_pp_res->gc_lut_r[disp_num][i].offset =
-		SCALED_BY_KCAL(test_r[i].offset, kr);
-
-		mdss_pp_res->gc_lut_g[disp_num][i].slope =
-		SCALED_BY_KCAL(test_g[i].slope, kg);
-		mdss_pp_res->gc_lut_g[disp_num][i].offset =
-		SCALED_BY_KCAL(test_g[i].offset, kg);
-
-		mdss_pp_res->gc_lut_b[disp_num][i].slope =
-		SCALED_BY_KCAL(test_b[i].slope, kb);
-		mdss_pp_res->gc_lut_b[disp_num][i].offset =
-		SCALED_BY_KCAL(test_b[i].offset, kb);
+		pgc_config->r_data[i].slope = kr;
+		pgc_config->g_data[i].slope = kg;
+		pgc_config->b_data[i].slope = kb;
 	}
 
-	mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PGC;
-}
-
-int mdss_mdp_pp_kcal_get(int data)
-{
-	int ret;
-	int disp_num = 0;
-
-	switch (data) {
-		case KCAL_DATA_R:
-			ret = mdss_pp_res->gc_lut_r[disp_num][0].slope;
-			break;
-		case KCAL_DATA_G:
-			ret = mdss_pp_res->gc_lut_g[disp_num][0].slope;
-			break;
-		case KCAL_DATA_B:
-			ret = mdss_pp_res->gc_lut_b[disp_num][0].slope;
-			break;
-		default:
-			ret = 0;
-			break;
-	}
-
-	return (ret == NUM_QLUT) ? MAX_KCAL : ret;
+	mdss_mdp_argc_config(pgc_config, &copybit);
 }
 
 int mdss_mdp_pp_init(struct device *dev)
@@ -2001,19 +1909,6 @@ int mdss_mdp_pp_init(struct device *dev)
 		}
 
 	}
-
-	if (!ret) {
-		mdss_mdp_pp_kcal_enable(true);
-#ifdef CONFIG_FURNACE_BOOTMODE
-		if (lge_get_android_dlcomplete() == 0)
-			mdss_mdp_pp_kcal_update(MAX_KCAL, MAX_KCAL, MAX_KCAL);
-		else
-			mdss_mdp_pp_kcal_update(232, 226, 242);
-#else
-		mdss_mdp_pp_kcal_update(MAX_KCAL, MAX_KCAL, MAX_KCAL);
-#endif
-	}
-
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;
 }
@@ -2825,9 +2720,6 @@ int mdss_mdp_argc_config(struct mdp_pgc_lut_data *config,
 {
 	int ret = 0;
 	u32 disp_num, dspp_num = 0;
-	struct mdp_pgc_lut_data local_cfg;
-	struct mdp_pgc_lut_data *pgc_ptr;
-	u32 tbl_size, r_size, g_size, b_size;
 	char __iomem *argc_addr = 0;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 
@@ -2844,7 +2736,6 @@ int mdss_mdp_argc_config(struct mdp_pgc_lut_data *config,
 	}
 
 	mutex_lock(&mdss_pp_mutex);
-
 	disp_num = PP_BLOCK(config->block) - MDP_LOGICAL_BLOCK_DISP_0;
 	ret = pp_get_dspp_num(disp_num, &dspp_num);
 	if (ret) {
@@ -2852,116 +2743,50 @@ int mdss_mdp_argc_config(struct mdp_pgc_lut_data *config,
 		goto argc_config_exit;
 	}
 
-	switch (PP_LOCAT(config->block)) {
-	case MDSS_PP_LM_CFG:
-		argc_addr = mdss_mdp_get_mixer_addr_off(dspp_num) +
-			MDSS_MDP_REG_LM_GC_LUT_BASE;
-		pgc_ptr = &mdss_pp_res->argc_disp_cfg[disp_num];
-		if (config->flags & MDP_PP_OPS_WRITE)
-			mdss_pp_res->pp_disp_flags[disp_num] |=
-				PP_FLAGS_DIRTY_ARGC;
-		break;
-	case MDSS_PP_DSPP_CFG:
-		argc_addr = mdss_mdp_get_dspp_addr_off(dspp_num) +
-					MDSS_MDP_REG_DSPP_GC_BASE;
-		pgc_ptr = &mdss_pp_res->pgc_disp_cfg[disp_num];
-		if (config->flags & MDP_PP_OPS_WRITE)
-			mdss_pp_res->pp_disp_flags[disp_num] |=
-				PP_FLAGS_DIRTY_PGC;
-		break;
-	default:
-		goto argc_config_exit;
-		break;
-	}
-
-	tbl_size = GC_LUT_SEGMENTS * sizeof(struct mdp_ar_gc_lut_data);
-
 	if (config->flags & MDP_PP_OPS_READ) {
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-		local_cfg = *config;
-		local_cfg.r_data =
-			&mdss_pp_res->gc_lut_r[disp_num][0];
-		local_cfg.g_data =
-			&mdss_pp_res->gc_lut_g[disp_num][0];
-		local_cfg.b_data =
-			&mdss_pp_res->gc_lut_b[disp_num][0];
-		if (mdata->has_no_lut_read)
-			pp_read_argc_lut_cached(&local_cfg);
-		else
-			pp_read_argc_lut(&local_cfg, argc_addr);
 
-		if ((tbl_size != local_cfg.num_r_stages *
-			sizeof(struct mdp_ar_gc_lut_data)) ||
-			(copy_to_user(config->r_data, local_cfg.r_data,
-				tbl_size))) {
+		switch (PP_LOCAT(config->block)) {
+		case MDSS_PP_LM_CFG:
+			argc_addr = mdss_mdp_get_mixer_addr_off(dspp_num) +
+				MDSS_MDP_REG_LM_GC_LUT_BASE;
+			break;
+		case MDSS_PP_DSPP_CFG:
+			argc_addr = mdss_mdp_get_dspp_addr_off(dspp_num) +
+				MDSS_MDP_REG_DSPP_GC_BASE;
+			break;
+		default:
 			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
-			ret = -EFAULT;
 			goto argc_config_exit;
+			break;
 		}
-		if ((tbl_size != local_cfg.num_g_stages *
-			sizeof(struct mdp_ar_gc_lut_data)) ||
-			(copy_to_user(config->g_data, local_cfg.g_data,
-				tbl_size))) {
-			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
-			ret = -EFAULT;
-			goto argc_config_exit;
-		}
-		if ((tbl_size != local_cfg.num_b_stages *
-			sizeof(struct mdp_ar_gc_lut_data)) ||
-			(copy_to_user(config->b_data, local_cfg.b_data,
-				tbl_size))) {
-			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
-			ret = -EFAULT;
-			goto argc_config_exit;
-		}
+
+		if (mdata->has_no_lut_read)
+			pp_read_argc_lut_cached(config);
+		else
+			pp_read_argc_lut(config, argc_addr);
 		*copyback = 1;
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 	} else {
-		r_size = config->num_r_stages *
-			sizeof(struct mdp_ar_gc_lut_data);
-		g_size = config->num_g_stages *
-			sizeof(struct mdp_ar_gc_lut_data);
-		b_size = config->num_b_stages *
-			sizeof(struct mdp_ar_gc_lut_data);
-		if (r_size > tbl_size ||
-			g_size > tbl_size ||
-			b_size > tbl_size ||
-			r_size == 0 ||
-			g_size == 0 ||
-			b_size == 0) {
-			ret = -EINVAL;
-			pr_warn("%s, number of rgb stages invalid",
-				__func__);
-			goto argc_config_exit;
+		switch (PP_LOCAT(config->block)) {
+		case MDSS_PP_LM_CFG:
+			mdss_pp_res->argc_disp_cfg[disp_num] = *config;
+			mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_ARGC;
+			break;
+		case MDSS_PP_DSPP_CFG:
+			mdss_pp_res->pgc_disp_cfg[disp_num] = *config;
+			mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PGC;
+			break;
+		default:
+			break;
 		}
-		if (copy_from_user(&mdss_pp_res->gc_lut_r[disp_num][0],
-			config->r_data, r_size)) {
-			ret = -EFAULT;
-			goto argc_config_exit;
-		}
-		if (copy_from_user(&mdss_pp_res->gc_lut_g[disp_num][0],
-			config->g_data, g_size)) {
-			ret = -EFAULT;
-			goto argc_config_exit;
-		}
-		if (copy_from_user(&mdss_pp_res->gc_lut_b[disp_num][0],
-			config->b_data, b_size)) {
-			ret = -EFAULT;
-			goto argc_config_exit;
-		}
-
-		*pgc_ptr = *config;
-		pgc_ptr->r_data =
-			&mdss_pp_res->gc_lut_r[disp_num][0];
-		pgc_ptr->g_data =
-			&mdss_pp_res->gc_lut_g[disp_num][0];
-		pgc_ptr->b_data =
-			&mdss_pp_res->gc_lut_b[disp_num][0];
 	}
+
 argc_config_exit:
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;
 }
+
 int mdss_mdp_hist_lut_config(struct mdp_hist_lut_data *config,
 					u32 *copyback)
 {

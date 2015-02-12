@@ -26,8 +26,8 @@
 
 static void kcal_apply_values(struct kcal_lut_data *lut_data)
 {
-	/* Continue to save values in case the user re-enables KCAL
-	 * after tuning values, so that they are restored on enable.
+	/* gc_lut_* will save lut values even when disabled and
+	 * properly restore them on enable.
 	 */
 	lut_data->red = (lut_data->red < lut_data->minimum) ?
 		lut_data->minimum : lut_data->red;
@@ -36,9 +36,7 @@ static void kcal_apply_values(struct kcal_lut_data *lut_data)
 	lut_data->blue = (lut_data->blue < lut_data->minimum) ?
 		lut_data->minimum : lut_data->blue;
 
-	if (lut_data->enable)
-		mdss_mdp_pp_kcal_update(lut_data->red, lut_data->green,
-			lut_data->blue);
+	mdss_mdp_pp_kcal_update(lut_data->red, lut_data->green, lut_data->blue);
 }
 
 static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
@@ -52,13 +50,13 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 
 	sscanf(buf, "%d %d %d", &kcal_r, &kcal_g, &kcal_b);
 
-	if (kcal_r < 0 || kcal_r > 255)
+	if (kcal_r < 0 || kcal_r > 256)
 		return -EINVAL;
 
-	if (kcal_g < 0 || kcal_g > 255)
+	if (kcal_g < 0 || kcal_g > 256)
 		return -EINVAL;
 
-	if (kcal_b < 0 || kcal_b > 255)
+	if (kcal_b < 0 || kcal_b > 256)
 		return -EINVAL;
 
 	lut_data->red = kcal_r;
@@ -90,7 +88,7 @@ static ssize_t kcal_min_store(struct device *dev,
 
 	sscanf(buf, "%d", &kcal_min);
 
-	if (kcal_min < 0 || kcal_min > 255)
+	if (kcal_min < 0 || kcal_min > 256)
 		return -EINVAL;
 
 	lut_data->minimum = kcal_min;
@@ -128,9 +126,6 @@ static ssize_t kcal_enable_store(struct device *dev,
 	lut_data->enable = kcal_enable;
 
 	mdss_mdp_pp_kcal_enable(lut_data->enable ? true : false);
-
-	if (lut_data->enable)
-		kcal_apply_values(lut_data);
 
 	return count;
 }
@@ -175,10 +170,40 @@ static ssize_t kcal_invert_show(struct device *dev,
 	return sprintf(buf, "%d\n", lut_data->invert);
 }
 
+static ssize_t kcal_sat_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int kcal_sat;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
+
+	if (count != 4)
+		return -EINVAL;
+
+	sscanf(buf, "%d", &kcal_sat);
+
+	if ((kcal_sat < 224 || kcal_sat > 383) && kcal_sat != 128)
+		return -EINVAL;
+
+	lut_data->sat = kcal_sat;
+
+	mdss_mdp_pp_kcal_sat(lut_data->sat);
+
+	return count;
+}
+
+static ssize_t kcal_sat_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", lut_data->sat);
+}
+
 static DEVICE_ATTR(kcal, 0644, kcal_show, kcal_store);
 static DEVICE_ATTR(kcal_min, 0644, kcal_min_show, kcal_min_store);
 static DEVICE_ATTR(kcal_enable, 0644, kcal_enable_show, kcal_enable_store);
 static DEVICE_ATTR(kcal_invert, 0644, kcal_invert_show, kcal_invert_store);
+static DEVICE_ATTR(kcal_sat, 0644, kcal_sat_show, kcal_sat_store);
 
 static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 {
@@ -192,12 +217,16 @@ static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	lut_data->red = mdss_mdp_pp_kcal_get(KCAL_DATA_R);
-	lut_data->green = mdss_mdp_pp_kcal_get(KCAL_DATA_G);
-	lut_data->blue = mdss_mdp_pp_kcal_get(KCAL_DATA_B);
+	mdss_mdp_pp_kcal_enable(true);
+	mdss_mdp_pp_kcal_update(NUM_QLUT, NUM_QLUT, NUM_QLUT);
+
+	lut_data->red = NUM_QLUT;
+	lut_data->green = NUM_QLUT;
+	lut_data->blue = NUM_QLUT;
 	lut_data->minimum = 35;
 	lut_data->enable = 1;
 	lut_data->invert = 0;
+	lut_data->sat = 256;
 
 	platform_set_drvdata(pdev, lut_data);
 
@@ -205,6 +234,7 @@ static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_min);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_enable);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_invert);
+	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_sat);
 	if (ret)
 		pr_err("%s: unable to create sysfs entries\n", __func__);
 
@@ -217,6 +247,9 @@ static int __devexit kcal_ctrl_remove(struct platform_device *pdev)
 
 	device_remove_file(&pdev->dev, &dev_attr_kcal);
 	device_remove_file(&pdev->dev, &dev_attr_kcal_min);
+	device_remove_file(&pdev->dev, &dev_attr_kcal_enable);
+	device_remove_file(&pdev->dev, &dev_attr_kcal_invert);
+	device_remove_file(&pdev->dev, &dev_attr_kcal_sat);
 
 	kfree(lut_data);
 
