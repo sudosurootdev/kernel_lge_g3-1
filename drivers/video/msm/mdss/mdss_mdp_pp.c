@@ -1843,7 +1843,7 @@ void mdss_mdp_pp_kcal_update(int kr, int kg, int kb)
 	mdss_mdp_argc_config(pgc_config, &copyback);
 }
 
-void mdss_mdp_pp_kcal_pa(int level)
+void mdss_mdp_pp_kcal_pa(struct kcal_lut_data *lut_data)
 {
 	u32 copyback = 0;
 	struct mdp_pa_cfg_data pa_config;
@@ -1852,7 +1852,10 @@ void mdss_mdp_pp_kcal_pa(int level)
 
 	pa_config.block = MDP_LOGICAL_BLOCK_DISP_0;
 	pa_config.pa_data.flags = MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE;
-	pa_config.pa_data.sat_adj = level;
+	pa_config.pa_data.sat_adj = lut_data->sat;
+	pa_config.pa_data.hue_adj = lut_data->hue;
+	pa_config.pa_data.val_adj = lut_data->val;
+	pa_config.pa_data.cont_adj = lut_data->cont;
 
 	mdss_mdp_pa_config(&pa_config, &copyback);
 }
