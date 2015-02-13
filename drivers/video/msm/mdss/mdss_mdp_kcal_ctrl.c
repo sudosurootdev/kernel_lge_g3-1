@@ -24,6 +24,10 @@
 #include "mdss_mdp.h"
 #include "mdss_mdp_kcal_ctrl.h"
 
+#ifdef CONFIG_FURNACE_BOOTMODE
+#include <mach/board_lge.h>
+#endif
+
 static void kcal_apply_values(struct kcal_lut_data *lut_data)
 {
 	/* gc_lut_* will save lut values even when disabled and
@@ -186,7 +190,7 @@ static ssize_t kcal_sat_store(struct device *dev,
 
 	lut_data->sat = kcal_sat;
 
-	mdss_mdp_pp_kcal_sat(lut_data->sat);
+	mdss_mdp_pp_kcal_pa(lut_data->sat);
 
 	return count;
 }
@@ -218,11 +222,22 @@ static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 	}
 
 	mdss_mdp_pp_kcal_enable(true);
-	mdss_mdp_pp_kcal_update(NUM_QLUT, NUM_QLUT, NUM_QLUT);
 
-	lut_data->red = NUM_QLUT;
-	lut_data->green = NUM_QLUT;
-	lut_data->blue = NUM_QLUT;
+#ifdef CONFIG_FURNACE_BOOTMODE
+	if (lge_get_android_dlcomplete() == 0) {
+		mdss_mdp_pp_kcal_update(NUM_QLUT, NUM_QLUT, NUM_QLUT);
+		lut_data->red = lut_data->green = lut_data->blue = NUM_QLUT;
+	} else {
+		mdss_mdp_pp_kcal_update(232, 226, 242);
+		lut_data->red = 232;
+		lut_data->green = 226;
+		lut_data->blue = 242;
+	}
+#else
+	mdss_mdp_pp_kcal_update(NUM_QLUT, NUM_QLUT, NUM_QLUT);
+	lut_data->red = lut_data->green = lut_data->blue = NUM_QLUT;
+#endif
+
 	lut_data->minimum = 35;
 	lut_data->enable = 1;
 	lut_data->invert = 0;

@@ -35,5 +35,5 @@ struct kcal_lut_data {
 
 void mdss_mdp_pp_kcal_enable(bool enable);
 void mdss_mdp_pp_kcal_update(int kr, int kg, int kb);
-void mdss_mdp_pp_kcal_sat(int level);
+void mdss_mdp_pp_kcal_pa(int level);
 #endif
