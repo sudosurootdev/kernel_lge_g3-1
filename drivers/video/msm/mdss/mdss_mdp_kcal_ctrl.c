@@ -161,7 +161,7 @@ static ssize_t kcal_invert_store(struct device *dev,
 
 	lut_data->invert = kcal_invert;
 
-	mdss_dsi_panel_invert(lut_data->invert);
+	mdss_mdp_pp_kcal_invert(lut_data);
 
 	return count;
 }
@@ -332,10 +332,11 @@ static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 	lut_data->minimum = 35;
 	lut_data->enable = 1;
 	lut_data->invert = 0;
-	lut_data->sat = 256;
+	lut_data->sat = DEF_PA;
 	lut_data->hue = 0;
-	lut_data->val = 256;
-	lut_data->cont = 256;
+	lut_data->val = DEF_PA;
+	lut_data->cont = DEF_PA;
+	lut_data->red = lut_data->green = lut_data->blue = NUM_QLUT;
 
 	platform_set_drvdata(pdev, lut_data);
 
