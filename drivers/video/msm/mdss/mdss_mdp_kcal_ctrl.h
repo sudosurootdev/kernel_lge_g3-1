@@ -18,10 +18,6 @@
 #ifndef __MDSS_MDP_KCAL_CTRL_H
 #define __MDSS_MDP_KCAL_CTRL_H
 
-#define KCAL_DATA_R 0x01
-#define KCAL_DATA_G 0x02
-#define KCAL_DATA_B 0x03
-
 #define NUM_QLUT 0x100
 #define DEF_PA 0xff
 #define PCC_ADJ 0x80
@@ -39,7 +35,6 @@ struct kcal_lut_data {
 	int cont;
 };
 
-void mdss_mdp_pp_kcal_enable(bool enable);
 void mdss_mdp_pp_kcal_update(struct kcal_lut_data *lut_data);
 void mdss_mdp_pp_kcal_pa(struct kcal_lut_data *lut_data);
 void mdss_mdp_pp_kcal_invert(struct kcal_lut_data *lut_data);
