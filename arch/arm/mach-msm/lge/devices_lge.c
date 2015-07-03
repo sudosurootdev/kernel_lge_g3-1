@@ -17,6 +17,10 @@
 #include <mach/lge_handle_panic.h>
 #endif
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <linux/memblock.h>
+#endif
+
 #ifdef CONFIG_LGE_PM
 #include <linux/qpnp/qpnp-adc.h>
 #include <mach/board_lge.h>
@@ -207,6 +211,16 @@ void __init lge_add_persist_ram_devices(void)
 
 void __init lge_reserve(void)
 {
+#ifdef CONFIG_KEXEC_HARDBOOT
+	struct memtype_reserve *mt = &reserve_info->memtype_reserve_table[MEMTYPE_EBI1];
+	phys_addr_t start = mt->start - SZ_1M - LGE_PERSISTENT_RAM_SIZE;
+	int ret = memblock_remove(start, SZ_1M);
+	if(!ret)
+	pr_info("Hardboot page reserved at 0x%X\n", start);
+	else
+	pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
+#endif	
+
 #if defined(CONFIG_ANDROID_PERSISTENT_RAM)
 	lge_add_persist_ram_devices();
 #endif
@@ -632,36 +646,7 @@ hw_rev_type lge_get_board_revno(void)
 {
     return lge_bd_rev;
 }
-#if defined(CONFIG_LCD_KCAL)
-/* LGE_CHANGE_S
-* change code for LCD KCAL
-* 2013-05-08, seojin.lee@lge.com
-*/
-int g_kcal_r = 255;
-int g_kcal_g = 255;
-int g_kcal_b = 255;
 
-extern int kcal_set_values(int kcal_r, int kcal_g, int kcal_b);
-static int __init display_kcal_setup(char *kcal)
-{
-	char vaild_k = 0;
-	int kcal_r = 255;
-	int kcal_g = 255;
-	int kcal_b = 255;
-
-	sscanf(kcal, "%d|%d|%d|%c", &kcal_r, &kcal_g, &kcal_b, &vaild_k);
-	pr_info("kcal is %d|%d|%d|%c\n", kcal_r, kcal_g, kcal_b, vaild_k);
-
-	if (vaild_k != 'K') {
-		pr_info("kcal not calibrated yet : %d\n", vaild_k);
-		kcal_r = kcal_g = kcal_b = 255;
-	}
-
-	kcal_set_values(kcal_r, kcal_g, kcal_b);
-	return 1;
-}
-__setup("lge.kcal=", display_kcal_setup);
-#endif
 #if defined(CONFIG_LGE_PM_BATTERY_ID_CHECKER)
 struct lge_battery_id_platform_data lge_battery_id_plat = {
 	.id = 13,

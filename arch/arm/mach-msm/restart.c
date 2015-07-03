@@ -42,6 +42,10 @@
 #include <mach/board_lge.h>
 #endif
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/kexec.h>
+#endif
+
 #define WDT0_RST	0x38
 #define WDT0_EN		0x40
 #define WDT0_BARK_TIME	0x4C
@@ -306,6 +310,10 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x6f656d00 | code, restart_reason);
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
+		} else if (!strncmp(cmd, "0x", 2)) {
+			unsigned long code;
+			code = simple_strtoul(cmd + 2, NULL, 16) & 0xffffffff;
+			__raw_writel(code, restart_reason);
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
@@ -379,6 +387,26 @@ static int __init msm_pmic_restart_init(void)
 
 late_initcall(msm_pmic_restart_init);
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+static void msm_kexec_hardboot_hook(void)
+{
+ set_dload_mode(0);
+
+ // Set PMIC to restart-on-poweroff
+ pm8xxx_reset_pwr_off(1);
+
+ // These are executed on normal reboot, but with kexec-hardboot,
+ // they reboot/panic the system immediately.
+#if 0
+ qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+
+ /* Needed to bypass debug image on some chips */
+ msm_disable_wdog_debug();
+ halt_spmi_pmic_arbiter();
+#endif
+}
+#endif
+
 static int __init msm_restart_init(void)
 {
 #ifdef CONFIG_LGE_HANDLE_PANIC
@@ -401,6 +429,10 @@ static int __init msm_restart_init(void)
 
 	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DISABLE_PMIC_ARBITER) > 0)
 		scm_pmic_arbiter_disable_supported = true;
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+	kexec_hardboot_hook = msm_kexec_hardboot_hook;
+#endif
 
 	return 0;
 }
